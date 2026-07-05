@@ -1,0 +1,12 @@
+# Transcrição local (roda na sua máquina, sem custo de API)
+faster-whisper>=1.0.0
+
+# Utilidades
+PyYAML>=6.0
+tqdm>=4.66
+
+# Segmentação por tema via LLM local (Ollama). Só o cliente HTTP:
+requests>=2.31
+
+# OBS: ffmpeg, ffprobe e (opcional) rclone e ollama NÃO são pacotes pip.
+# Veja o README para instalar essas ferramentas externas.
