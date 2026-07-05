@@ -61,23 +61,75 @@ def extrair_segmentos(video: str, segmentos: list[tuple[float, float]], destino:
         raise RuntimeError(f"ffmpeg falhou na costura:\n{proc.stderr[-600:]}")
 
 
-def queimar_legenda(clip: Path, srt_path: Path, destino: Path, lcfg: dict) -> None:
-    """Queima a legenda .srt no clipe (estilo Reels)."""
-    estilo = (
-        f"FontSize={lcfg['fonte_tamanho']},"
-        "PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
-        "BorderStyle=1,Outline=2,Shadow=0"
-    )
-    srt_ff = str(srt_path).replace("\\", "/").replace(":", r"\:")
+def _escape_headline(texto: str) -> str:
+    """Deixa o texto seguro pro drawtext (fica entre aspas simples no filtergraph).
+
+    O drawtext faz uma segunda passada de parsing, então ':' e '%' no texto
+    precisam ser escapados mesmo dentro das aspas; a apóstrofe vira tipográfica.
+    """
+    return (texto.replace("\\", " ").replace("'", "’")
+                 .replace(":", r"\:").replace("%", r"\%"))
+
+
+def _montar_filtro(cfg: dict, srt_path: Path, headline: str | None):
+    """Monta o filtergraph: 9:16 opcional + legenda queimada + headline opcional.
+
+    Retorna (filter_complex, label_saida) ou (None, None) se nada a filtrar.
+    """
+    fmt = cfg.get("formato", {}) or {}
+    lcfg = cfg["legendas"]
+    vertical = fmt.get("vertical", False)
+    mostrar_head = bool(fmt.get("headline", False) and headline)
+    hsec = fmt.get("headline_segundos", 3.5)
+
+    passos, cur = [], "0:v"
+
+    if vertical:
+        passos.append("[0:v]scale=1080:1920:force_original_aspect_ratio=increase,"
+                      "crop=1080:1920,gblur=sigma=20[bg]")
+        passos.append("[0:v]scale=1080:-2[fg]")
+        passos.append("[bg][fg]overlay=(W-w)/2:(H-h)/2[comp]")
+        cur = "comp"
+
+    if lcfg.get("queimar"):
+        estilo = (f"FontSize={lcfg['fonte_tamanho']},"
+                  "PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,"
+                  "BorderStyle=1,Outline=2,Shadow=0")
+        srt_ff = str(srt_path).replace("\\", "/").replace(":", r"\:")
+        passos.append(f"[{cur}]subtitles='{srt_ff}':force_style='{estilo}'[subd]")
+        cur = "subd"
+
+    if mostrar_head:
+        txt = _escape_headline(headline)
+        fs = 46 if vertical else 34
+        y = 120 if vertical else 50
+        passos.append(
+            f"[{cur}]drawtext=text='{txt}':fontcolor=white:fontsize={fs}:"
+            f"x=(w-text_w)/2:y={y}:box=1:boxcolor=black@0.55:boxborderw=18:"
+            f"line_spacing=8:enable='lt(t,{hsec})'[vout]"
+        )
+        cur = "vout"
+
+    if cur == "0:v":
+        return None, None
+    return ";".join(passos), cur
+
+
+def renderizar(clip: Path, srt_path: Path, destino: Path, cfg: dict, headline: str | None) -> None:
+    """Aplica 9:16 (opcional), legenda queimada e headline (opcional) no clipe."""
+    fc, saida = _montar_filtro(cfg, srt_path, headline)
+    if not fc:
+        shutil.copy(clip, destino)
+        return
     proc = subprocess.run(
         ["ffmpeg", "-y", "-i", str(clip),
-         "-vf", f"subtitles='{srt_ff}':force_style='{estilo}'",
+         "-filter_complex", fc, "-map", f"[{saida}]", "-map", "0:a?",
          "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
          "-c:a", "aac", "-b:a", "160k", str(destino)],
         capture_output=True, text=True,
     )
     if proc.returncode != 0:
-        raise RuntimeError(f"ffmpeg falhou ao queimar legenda:\n{proc.stderr[-600:]}")
+        raise RuntimeError(f"ffmpeg falhou ao renderizar:\n{proc.stderr[-700:]}")
 
 
 def processar_lista(cfg: dict, json_path: str) -> list[Path]:
@@ -117,10 +169,7 @@ def processar_lista(cfg: dict, json_path: str) -> list[Path]:
             srt_path.write_text(srt, encoding="utf-8")
 
             destino = saida / f"{nome}.mp4"
-            if lcfg["queimar"]:
-                queimar_legenda(clip, srt_path, destino, lcfg)
-            else:
-                shutil.copy(clip, destino)
+            renderizar(clip, srt_path, destino, cfg, c.get("headline"))
 
         gerados.append(destino)
 

@@ -37,6 +37,16 @@ temas:
   # Se usar provedor "anthropic", a chave vem da variável de ambiente ANTHROPIC_API_KEY.
   anthropic_modelo: "claude-sonnet-5"
 
+# ---- Formato de saída (Reels) ----
+formato:
+  # true = converte pra vertical 9:16 (1080x1920) com fundo desfocado e o vídeo
+  # centralizado — ideal pra Reels/Shorts/TikTok. false = mantém o formato original.
+  vertical: true
+  # true = sobrepõe a headline do corte (campo "headline" no JSON) nos primeiros
+  # segundos. Só aparece nos cortes que têm headline definida.
+  headline: true
+  headline_segundos: 3.5
+
 # ---- Legendas ----
 legendas:
   # true = "queima" a legenda no vídeo (bom pra Reels/Shorts).

@@ -144,6 +144,21 @@ Cada corte gera um `NN-titulo.mp4` (legenda queimada, se `legendas.queimar: true
 e um `.srt` ao lado. O episódio de exemplo (`cortes/gorayeb-ep01.json`) já vem
 com os 39 cortes mapeados.
 
+### Formato Reels (9:16 + headline)
+
+No `config.local.yaml`, o bloco `formato` controla a saída:
+
+```yaml
+formato:
+  vertical: true        # 9:16 (1080x1920), fundo desfocado + vídeo centralizado
+  headline: true        # sobrepõe a headline do corte nos primeiros segundos
+  headline_segundos: 3.5
+```
+
+A **headline** vem do campo `"headline"` de cada corte no JSON (só aparece nos
+cortes que têm uma). Com `vertical: true` o corte já sai pronto pra Reels/Shorts/
+TikTok, sem passar por editor.
+
 ---
 
 ## ⚙️ Ajustes comuns
