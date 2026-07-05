@@ -111,6 +111,41 @@ se quiser, editar antes de reprocessar.
 
 ---
 
+## 🎯 Modo LISTA — cortes com minutagem já definida
+
+Se você **já tem a minutagem de cada corte** (num roteiro, por exemplo), não
+precisa da IA adivinhar os temas. Use o modo lista: ele corta os clipes exatos,
+legenda e queima — direto de um arquivo JSON.
+
+```bash
+# 1. Baixe o vídeo master do Drive pra pasta entrada/
+# 2. Confira o caminho no campo "video" do JSON
+# 3. Rode:
+python cortar_lista.py cortes/gorayeb-ep01.json
+```
+
+O JSON descreve cada corte por segmentos de tempo (em segundos):
+
+```json
+{
+  "video": "entrada/episodio.mp4",
+  "cortes": [
+    { "n": "1",  "titulo": "O bilhete da mae",  "segmentos": [[990, 1052]] },
+    { "n": "C1", "titulo": "Duas maes uma licao", "segmentos": [[990, 1035], [2620, 2659]] }
+  ]
+}
+```
+
+- **Um segmento** `[[inicio, fim]]` → corte direto.
+- **Vários segmentos** → o pipeline **costura** (concatena) os trechos num clipe só
+  (é assim que os "cortes cruzados" juntam momentos diferentes).
+
+Cada corte gera um `NN-titulo.mp4` (legenda queimada, se `legendas.queimar: true`)
+e um `.srt` ao lado. O episódio de exemplo (`cortes/gorayeb-ep01.json`) já vem
+com os 39 cortes mapeados.
+
+---
+
 ## ⚙️ Ajustes comuns
 
 | Quero... | Onde mexer (`config.local.yaml`) |

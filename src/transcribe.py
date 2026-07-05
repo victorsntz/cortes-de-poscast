@@ -28,21 +28,25 @@ class Segmento:
         return d
 
 
-def transcrever(video: str, cfg: dict) -> list[Segmento]:
-    """Transcreve o áudio do vídeo e retorna segmentos com timestamps por palavra."""
+def carregar_modelo(cfg: dict):
+    """Carrega o modelo Whisper uma única vez (reutilizável entre vários cortes)."""
     from faster_whisper import WhisperModel
 
     wcfg = cfg["whisper"]
     print(f"[transcribe] Carregando modelo Whisper '{wcfg['modelo']}' "
           f"({wcfg['dispositivo']}/{wcfg['precisao']})...")
-
-    modelo = WhisperModel(
+    return WhisperModel(
         wcfg["modelo"],
         device=wcfg["dispositivo"],
         compute_type=wcfg["precisao"],
     )
 
-    print(f"[transcribe] Transcrevendo '{Path(video).name}' — isso pode levar alguns minutos...")
+
+def transcrever_com_modelo(modelo, video: str, cfg: dict, silencioso: bool = False) -> list[Segmento]:
+    """Transcreve um arquivo usando um modelo já carregado."""
+    wcfg = cfg["whisper"]
+    if not silencioso:
+        print(f"[transcribe] Transcrevendo '{Path(video).name}'...")
     segmentos_raw, info = modelo.transcribe(
         video,
         language=wcfg.get("idioma", "pt"),
@@ -60,7 +64,13 @@ def transcrever(video: str, cfg: dict) -> list[Segmento]:
         segmentos.append(
             Segmento(inicio=s.start, fim=s.end, texto=s.text.strip(), palavras=palavras)
         )
+    return segmentos
 
-    dur = info.duration if info else 0
-    print(f"[transcribe] Pronto: {len(segmentos)} segmentos, ~{dur/60:.1f} min de áudio.")
+
+def transcrever(video: str, cfg: dict) -> list[Segmento]:
+    """Transcreve o áudio do vídeo e retorna segmentos com timestamps por palavra."""
+    modelo = carregar_modelo(cfg)
+    print(f"[transcribe] Isso pode levar alguns minutos...")
+    segmentos = transcrever_com_modelo(modelo, video, cfg, silencioso=True)
+    print(f"[transcribe] Pronto: {len(segmentos)} segmentos.")
     return segmentos
