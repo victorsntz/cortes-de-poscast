@@ -1,0 +1,57 @@
+# =============================================================
+# Configuração dos Cortes de Podcast
+# Copie este arquivo para "config.local.yaml" e ajuste os valores.
+# =============================================================
+
+# ---- Transcrição (Whisper local) ----
+whisper:
+  # Modelos: tiny, base, small, medium, large-v3
+  # "medium" é um bom equilíbrio PT-BR x velocidade. Use "large-v3" pra máxima qualidade.
+  modelo: "medium"
+  idioma: "pt"
+  # "cpu" (funciona em qualquer PC) ou "cuda" (se tiver GPU NVIDIA - muito mais rápido)
+  dispositivo: "cpu"
+  # int8 = mais leve/rápido na CPU. Use "float16" na GPU.
+  precisao: "int8"
+
+# ---- Detecção de respiros / silêncios (ffmpeg) ----
+respiros:
+  # Abaixo desse volume (dB) é considerado silêncio. -30 é um bom começo.
+  ruido_db: -30
+  # Duração mínima do silêncio (segundos) pra contar como "respiro" de corte.
+  duracao_minima: 0.6
+  # Margem (segundos) que sobra antes/depois do corte, pra não cortar colado na fala.
+  margem: 0.25
+
+# ---- Segmentação por tema (LLM local via Ollama) ----
+temas:
+  # Precisa ter o Ollama rodando: https://ollama.com  (ex: `ollama run llama3.1`)
+  provedor: "ollama"          # "ollama" (local/grátis) ou "anthropic" (API paga)
+  modelo: "llama3.1:8b"
+  ollama_url: "http://localhost:11434"
+  # Quantos temas esperar num episódio típico (guia, não trava exato).
+  temas_alvo: 20
+  # Duração mínima/máxima aceitável de um corte por tema (segundos).
+  duracao_min: 40
+  duracao_max: 180
+  # Se usar provedor "anthropic", a chave vem da variável de ambiente ANTHROPIC_API_KEY.
+  anthropic_modelo: "claude-sonnet-5"
+
+# ---- Legendas ----
+legendas:
+  # true = "queima" a legenda no vídeo (bom pra Reels/Shorts).
+  # false = só gera o arquivo .srt ao lado do corte.
+  queimar: true
+  fonte_tamanho: 18
+  # Máx. de caracteres por linha de legenda.
+  max_chars_linha: 42
+
+# ---- Exportação ----
+export:
+  # Pasta local onde os cortes finais são salvos.
+  pasta_saida: "saida"
+  # Enviar pro Google Drive via rclone? (precisa do rclone configurado - veja README)
+  enviar_drive: false
+  # Nome do "remote" do rclone e a pasta de destino no Drive.
+  rclone_remote: "gdrive"
+  rclone_pasta: "Cortes de Podcast"
